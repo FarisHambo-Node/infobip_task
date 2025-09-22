@@ -3,6 +3,10 @@ __pycache__/
 *.pyc
 venv/
 .env
+config.env
+
+# Conda environments
+infobip/
 
 # IDE
 .vscode/
@@ -14,6 +18,9 @@ venv/
 # AWS
 *.pem
 *.key
+
+# Terraform
+terraform.tfvars
 
 # Logs
 *.log
