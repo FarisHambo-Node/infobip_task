@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# AWS
+*.pem
+*.key
+
+# Logs
+*.log
+
+# PDFs
+*.pdf
