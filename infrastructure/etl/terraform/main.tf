@@ -31,22 +31,37 @@ resource "aws_s3_object" "glue_script" {
   }
 }
 
-# Create zip file for Lambda function
-data "archive_file" "check_lambda_zip" {
-  type        = "zip"
-  source_file = "${path.module}/../../../etl/check_lambda.py"
-  output_path = "${path.module}/check_lambda.zip"
+# Build Lambda package with dependencies
+resource "null_resource" "build_lambda_package" {
+  triggers = {
+    lambda_code = filemd5("${path.module}/../../../etl/check_lambda.py")
+    requirements = filemd5("${path.module}/../../../etl/lambda_requirements.txt")
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      cd ${path.module}
+      rm -rf lambda_package
+      mkdir lambda_package
+      cp ${path.module}/../../../etl/check_lambda.py lambda_package/
+      pip install -r ${path.module}/../../../etl/lambda_requirements.txt -t lambda_package/
+      cd lambda_package
+      zip -r ../check_lambda.zip .
+      cd ..
+      rm -rf lambda_package
+    EOT
+  }
 }
 
 # Lambda function for table check
 resource "aws_lambda_function" "check_table" {
-  filename         = data.archive_file.check_lambda_zip.output_path
+  filename         = "${path.module}/check_lambda.zip"
   function_name    = "${var.project_name}-${var.environment}-check-table"
   role            = var.data_processing_role_arn
   handler         = "check_lambda.lambda_handler"
   runtime         = "python3.9"
   timeout         = 60
-
+  
   environment {
     variables = {
       DB_HOST     = var.db_host
@@ -61,6 +76,8 @@ resource "aws_lambda_function" "check_table" {
     Environment = var.environment
     Project     = var.project_name
   }
+
+  depends_on = [null_resource.build_lambda_package]
 }
 
 # Glue Job

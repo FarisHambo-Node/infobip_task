@@ -1,19 +1,20 @@
 import json
-import psycopg2
 import os
 from datetime import datetime
+import pg8000
 
 
 def lambda_handler(event, context):
     """Simple Lambda to check if customers_revenue_by_period table was updated this month"""
 
     try:
-        # Connect to RDS
-        conn = psycopg2.connect(
+        # Connect to RDS using pg8000 (pure Python, no compilation needed)
+        conn = pg8000.connect(
             host=os.environ["DB_HOST"],
             database=os.environ["DB_NAME"],
             user=os.environ["DB_USER"],
             password=os.environ["DB_PASSWORD"],
+            ssl_context=True,  # Enable SSL connection
         )
 
         cursor = conn.cursor()
