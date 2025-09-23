@@ -272,11 +272,11 @@ class DummyDataGenerator:
                 self.upload_to_s3(channels_df, "channels")
                 self.upload_to_s3(traffic_df, "traffic")
 
-            logger.info("✅ Data generation completed successfully")
+            logger.info("Data generation completed successfully")
             return customers_df, channels_df, traffic_df
 
         except Exception as e:
-            logger.error(f"❌ Data generation failed: {str(e)}")
+            logger.error(f"Data generation failed: {str(e)}")
             raise
 
 
