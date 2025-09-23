@@ -43,3 +43,16 @@ CREATE TABLE traffic (
 CREATE INDEX idx_traffic_send_date ON traffic(send_date);
 CREATE INDEX idx_traffic_account_id ON traffic(account_id);
 CREATE INDEX idx_customers_account_id ON customers(account_id);
+
+-- Customers Revenue by Period table (Serving Layer)
+CREATE TABLE customers_revenue_by_period (
+    customer_id INTEGER PRIMARY KEY,
+    revenue_last_month DECIMAL(12,2) DEFAULT 0.00,
+    revenue_last_quarter DECIMAL(12,2) DEFAULT 0.00,
+    revenue_mtd DECIMAL(12,2) DEFAULT 0.00,  -- Month-to-date
+    revenue_ytd DECIMAL(12,2) DEFAULT 0.00,  -- Year-to-date
+    revenue_increase_pct_qoq DECIMAL(5,2) DEFAULT 0.00,  -- Quarter-over-quarter %
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT fk_customer_revenue FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+);
