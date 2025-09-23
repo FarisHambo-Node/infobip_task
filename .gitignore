@@ -20,8 +20,7 @@ infobip/
 *.key
 
 # Terraform
-terraform.tfvars
-terraform.tfvars.json
+*.tfvars
 *.tfstate
 *.tfstate.*
 .terraform/

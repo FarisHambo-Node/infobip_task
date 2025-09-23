@@ -119,3 +119,62 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   role       = aws_iam_role.data_processing_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
+
+# Security Group for RDS (public access)
+resource "aws_security_group" "rds" {
+  name_prefix = "${var.project_name}-${var.environment}-rds-"
+  description = "Security group for RDS PostgreSQL"
+
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-rds-sg"
+    Environment = var.environment
+    Project     = var.project_name
+  }
+}
+
+# RDS PostgreSQL Instance (Public)
+resource "aws_db_instance" "main" {
+  identifier = "${var.project_name}-${var.environment}-postgres"
+
+  engine         = "postgres"
+  instance_class = var.db_instance_class
+
+  allocated_storage     = var.db_allocated_storage
+  max_allocated_storage = var.db_allocated_storage * 2
+  storage_type          = "gp2"
+  storage_encrypted     = true
+
+  db_name  = "infobip_task"
+  username = var.db_username
+  password = var.db_password
+
+  vpc_security_group_ids = [aws_security_group.rds.id]
+  publicly_accessible    = true  # Public access
+
+  backup_retention_period = 7
+  backup_window          = "03:00-04:00"
+  maintenance_window     = "sun:04:00-sun:05:00"
+
+  skip_final_snapshot = true
+  deletion_protection = false
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-postgres"
+    Environment = var.environment
+    Project     = var.project_name
+  }
+}
