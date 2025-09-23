@@ -1,0 +1,64 @@
+{
+    "Comment": "Simple ETL Pipeline: Glue Job -> Lambda Check",
+    "StartAt": "RunGlueJob",
+    "States": {
+        "RunGlueJob": {
+            "Type": "Task",
+            "Resource": "arn:aws:glue:${AWS_REGION}:${AWS_ACCOUNT_ID}:job/infobip-etl-glue-job",
+            "TimeoutSeconds": 1800,
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "IntervalSeconds": 30,
+                    "MaxAttempts": 2,
+                    "BackoffRate": 2.0
+                }
+            ],
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "Next": "ETLFailed",
+                    "ResultPath": "$.error"
+                }
+            ],
+            "Next": "CheckTable"
+        },
+        "CheckTable": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:infobip-check-table",
+            "TimeoutSeconds": 60,
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "IntervalSeconds": 5,
+                    "MaxAttempts": 2,
+                    "BackoffRate": 2.0
+                }
+            ],
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "Next": "ETLFailed",
+                    "ResultPath": "$.error"
+                }
+            ],
+            "Next": "ETLSuccess"
+        },
+        "ETLSuccess": {
+            "Type": "Succeed",
+            "Comment": "ETL pipeline completed successfully"
+        },
+        "ETLFailed": {
+            "Type": "Fail",
+            "Comment": "ETL pipeline failed"
+        }
+    }
+}
