@@ -21,6 +21,16 @@ infobip/
 
 # Terraform
 terraform.tfvars
+terraform.tfvars.json
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
+crash.*.log
+
+# Data files
+data/
 
 # Logs
 *.log

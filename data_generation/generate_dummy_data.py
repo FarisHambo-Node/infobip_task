@@ -6,12 +6,24 @@ Generates dummy data for the 3 required tables and uploads to S3
 
 import os
 import random
+import logging
 from datetime import datetime, timedelta
 from io import StringIO
 
 import boto3
 import pandas as pd
 from faker import Faker
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Initialize Faker for generating realistic data
 fake = Faker()
@@ -24,10 +36,16 @@ class DummyDataGenerator:
         self.s3_client = None
 
         if s3_bucket_name:
-            self.s3_client = boto3.client("s3", region_name=aws_region)
+            try:
+                self.s3_client = boto3.client("s3", region_name=aws_region)
+                logger.info(f"S3 client initialized for bucket: {s3_bucket_name}")
+            except Exception as e:
+                logger.error(f"Failed to initialize S3 client: {str(e)}")
+                raise
 
     def generate_customers(self, num_customers=100):
         """Generate dummy customer data"""
+        logger.info("Generating customers...")
         print(f"Generating {num_customers} customers...")
 
         segments = ["Enterprise", "SMB", "Startup", "Mid-Market"]
@@ -69,10 +87,13 @@ class DummyDataGenerator:
             }
             customers.append(customer)
 
-        return pd.DataFrame(customers)
+        customers_df = pd.DataFrame(customers)
+        logger.info(f"Generated {len(customers_df)} customers")
+        return customers_df
 
     def generate_channels(self):
         """Generate dummy channel data"""
+        logger.info("Generating channels...")
         print("Generating channels...")
 
         channels_data = [
@@ -126,10 +147,13 @@ class DummyDataGenerator:
             },
         ]
 
-        return pd.DataFrame(channels_data)
+        channels_df = pd.DataFrame(channels_data)
+        logger.info(f"Generated {len(channels_df)} channels")
+        return channels_df
 
     def generate_traffic(self, num_days=365, num_customers=100):
         """Generate dummy traffic data for the last 12 months"""
+        logger.info("Generating traffic...")
         print(f"Generating traffic data for {num_days} days...")
 
         # Generate date range for the last 12 months
@@ -171,7 +195,9 @@ class DummyDataGenerator:
                 traffic_records.append(traffic_record)
                 record_id += 1
 
-        return pd.DataFrame(traffic_records)
+        traffic_df = pd.DataFrame(traffic_records)
+        logger.info(f"Generated {len(traffic_df)} traffic records")
+        return traffic_df
 
     def upload_to_s3(self, df, table_name, file_format="csv"):
         """Upload DataFrame to S3"""
@@ -180,81 +206,102 @@ class DummyDataGenerator:
             df.to_csv(f"data/{table_name}.csv", index=False)
             return
 
+        logger.info(f"Uploading {table_name} to S3...")
         print(f"Uploading {table_name} to S3...")
 
-        if file_format == "csv":
-            csv_buffer = StringIO()
-            df.to_csv(csv_buffer, index=False)
-            key = f"raw_data/{table_name}.csv"
+        try:
+            if file_format == "csv":
+                csv_buffer = StringIO()
+                df.to_csv(csv_buffer, index=False)
+                key = f"raw_data/{table_name}.csv"
 
-            self.s3_client.put_object(
-                Bucket=self.s3_bucket_name,
-                Key=key,
-                Body=csv_buffer.getvalue(),
-                ContentType="text/csv",
-            )
-        elif file_format == "json":
-            json_data = df.to_json(orient="records", date_format="iso")
-            key = f"raw_data/{table_name}.json"
+                self.s3_client.put_object(
+                    Bucket=self.s3_bucket_name,
+                    Key=key,
+                    Body=csv_buffer.getvalue(),
+                    ContentType="text/csv",
+                )
+            elif file_format == "json":
+                json_data = df.to_json(orient="records", date_format="iso")
+                key = f"raw_data/{table_name}.json"
 
-            self.s3_client.put_object(
-                Bucket=self.s3_bucket_name,
-                Key=key,
-                Body=json_data,
-                ContentType="application/json",
-            )
+                self.s3_client.put_object(
+                    Bucket=self.s3_bucket_name,
+                    Key=key,
+                    Body=json_data,
+                    ContentType="application/json",
+                )
 
-        print(f"Successfully uploaded {table_name} to s3://{self.s3_bucket_name}/{key}")
+            logger.info(f"Uploaded {table_name} to S3")
+            print(f"Successfully uploaded {table_name} to s3://{self.s3_bucket_name}/{key}")
+            
+        except Exception as e:
+            logger.error(f"Upload failed: {table_name}")
+            raise
 
     def generate_all_data(self, num_customers=100, num_days=365, upload_to_s3=True):
         """Generate all dummy data and optionally upload to S3"""
+        logger.info("Starting data generation...")
         print("Starting dummy data generation...")
 
-        # Create data directory if it doesn't exist
-        os.makedirs("data", exist_ok=True)
+        try:
+            # Create data directory if it doesn't exist
+            os.makedirs("data", exist_ok=True)
 
-        # Generate data
-        customers_df = self.generate_customers(num_customers)
-        channels_df = self.generate_channels()
-        traffic_df = self.generate_traffic(num_days, num_customers)
+            # Generate data
+            customers_df = self.generate_customers(num_customers)
+            channels_df = self.generate_channels()
+            traffic_df = self.generate_traffic(num_days, num_customers)
 
-        # Save locally
-        customers_df.to_csv("data/customers.csv", index=False)
-        channels_df.to_csv("data/channels.csv", index=False)
-        traffic_df.to_csv("data/traffic.csv", index=False)
+            # Save locally
+            logger.info("Saving data locally...")
+            customers_df.to_csv("data/customers.csv", index=False)
+            channels_df.to_csv("data/channels.csv", index=False)
+            traffic_df.to_csv("data/traffic.csv", index=False)
 
-        print(f"Generated data summary:")
-        print(f"- Customers: {len(customers_df)} records")
-        print(f"- Channels: {len(channels_df)} records")
-        print(f"- Traffic: {len(traffic_df)} records")
+            print(f"Generated data summary:")
+            print(f"- Customers: {len(customers_df)} records")
+            print(f"- Channels: {len(channels_df)} records")
+            print(f"- Traffic: {len(traffic_df)} records")
 
-        # Upload to S3 if configured
-        if upload_to_s3 and self.s3_bucket_name:
-            self.upload_to_s3(customers_df, "customers")
-            self.upload_to_s3(channels_df, "channels")
-            self.upload_to_s3(traffic_df, "traffic")
+            # Upload to S3 if configured
+            if upload_to_s3 and self.s3_bucket_name:
+                logger.info("Uploading to S3...")
+                self.upload_to_s3(customers_df, "customers")
+                self.upload_to_s3(channels_df, "channels")
+                self.upload_to_s3(traffic_df, "traffic")
 
-        return customers_df, channels_df, traffic_df
+            logger.info("✅ Data generation completed successfully")
+            return customers_df, channels_df, traffic_df
+
+        except Exception as e:
+            logger.error(f"❌ Data generation failed: {str(e)}")
+            raise
 
 
 def main():
     """Main function to run the data generation"""
-    # You can set your S3 bucket name here or via environment variable
-    s3_bucket_name = os.getenv("S3_BUCKET_NAME")
+    try:
+        # You can set your S3 bucket name here or via environment variable
+        s3_bucket_name = os.getenv("S3_BUCKET_NAME")
 
-    # Initialize generator
-    generator = DummyDataGenerator(s3_bucket_name=s3_bucket_name)
+        # Initialize generator
+        generator = DummyDataGenerator(s3_bucket_name=s3_bucket_name)
 
-    # Generate data
-    customers_df, channels_df, traffic_df = generator.generate_all_data(
-        num_customers=100, num_days=365, upload_to_s3=bool(s3_bucket_name)
-    )
+        # Generate data
+        customers_df, channels_df, traffic_df = generator.generate_all_data(
+            num_customers=100, num_days=365, upload_to_s3=bool(s3_bucket_name)
+        )
 
-    print("\nData generation completed!")
-    print("Files saved to ./data/ directory")
+        print("\nData generation completed!")
+        print("Files saved to ./data/ directory")
 
-    if s3_bucket_name:
-        print(f"Files also uploaded to S3 bucket: {s3_bucket_name}")
+        if s3_bucket_name:
+            print(f"Files also uploaded to S3 bucket: {s3_bucket_name}")
+
+    except Exception as e:
+        print(f"\nError: {str(e)}")
+        raise
 
 
 if __name__ == "__main__":
