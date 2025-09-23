@@ -12,10 +12,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Data sources
-data "aws_caller_identity" "current" {}
-data "aws_region" "current" {}
-
 # S3 bucket for Glue job scripts
 resource "aws_s3_bucket" "analytics_scripts" {
   bucket = "${var.project_name}-analytics-scripts-${random_id.bucket_suffix.hex}"
@@ -25,29 +21,11 @@ resource "random_id" "bucket_suffix" {
   byte_length = 4
 }
 
-resource "aws_s3_bucket_versioning" "analytics_scripts" {
-  bucket = aws_s3_bucket.analytics_scripts.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "analytics_scripts" {
-  bucket = aws_s3_bucket.analytics_scripts.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
 # Upload Glue job script
 resource "aws_s3_object" "business_analytics_job" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "glue_jobs/business_analytics_job.py"
   source = "../../../analytics/glue_jobs/business_analytics_job.py"
-  etag   = filemd5("../../../analytics/glue_jobs/business_analytics_job.py")
 }
 
 # Upload SQL files
@@ -55,42 +33,36 @@ resource "aws_s3_object" "analytics_schema_sql" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "sql/analytics_schema.sql"
   source = "../../../analytics/sql/analytics_schema.sql"
-  etag   = filemd5("../../../analytics/sql/analytics_schema.sql")
 }
 
 resource "aws_s3_object" "question_1_sql" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "sql/question_1_industry_exposure.sql"
   source = "../../../analytics/sql/question_1_industry_exposure.sql"
-  etag   = filemd5("../../../analytics/sql/question_1_industry_exposure.sql")
 }
 
 resource "aws_s3_object" "question_2_sql" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "sql/question_2_segment_analysis.sql"
   source = "../../../analytics/sql/question_2_segment_analysis.sql"
-  etag   = filemd5("../../../analytics/sql/question_2_segment_analysis.sql")
 }
 
 resource "aws_s3_object" "question_3_sql" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "sql/question_3_recent_customers.sql"
   source = "../../../analytics/sql/question_3_recent_customers.sql"
-  etag   = filemd5("../../../analytics/sql/question_3_recent_customers.sql")
 }
 
 resource "aws_s3_object" "question_4_sql" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "sql/question_4_top_customers.sql"
   source = "../../../analytics/sql/question_4_top_customers.sql"
-  etag   = filemd5("../../../analytics/sql/question_4_top_customers.sql")
 }
 
 resource "aws_s3_object" "question_5_sql" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "sql/question_5_monthly_active_customers.sql"
   source = "../../../analytics/sql/question_5_monthly_active_customers.sql"
-  etag   = filemd5("../../../analytics/sql/question_5_monthly_active_customers.sql")
 }
 
 # IAM role for Glue job
@@ -189,12 +161,7 @@ resource "aws_glue_job" "business_analytics" {
   default_arguments = {
     "--job-language"                    = "python"
     "--job-bookmark-option"             = "job-bookmark-disable"
-    "--enable-metrics"                  = "true"
-    "--enable-continuous-cloudwatch-log" = "true"
-    "--enable-spark-ui"                 = "true"
-    "--spark-event-logs-path"           = "s3://${aws_s3_bucket.analytics_scripts.bucket}/spark-logs/"
-    "--TempDir"                         = "s3://${aws_s3_bucket.analytics_scripts.bucket}/temp/"
-    "--extra-py-files"                  = "s3://${aws_s3_bucket.analytics_scripts.bucket}/sql/analytics_schema.sql,s3://${aws_s3_bucket.analytics_scripts.bucket}/sql/question_1_industry_exposure.sql,s3://${aws_s3_bucket.analytics_scripts.bucket}/sql/question_2_segment_analysis.sql,s3://${aws_s3_bucket.analytics_scripts.bucket}/sql/question_3_recent_customers.sql,s3://${aws_s3_bucket.analytics_scripts.bucket}/sql/question_4_top_customers.sql,s3://${aws_s3_bucket.analytics_scripts.bucket}/sql/question_5_monthly_active_customers.sql"
+    "--additional-python-modules"       = "psycopg2-binary==2.9.7"
     "--S3_BUCKET"                       = var.data_bucket_name
     "--DB_HOST"                         = var.rds_endpoint
     "--DB_NAME"                         = var.rds_database_name
@@ -204,87 +171,4 @@ resource "aws_glue_job" "business_analytics" {
 
   max_capacity = var.glue_max_capacity
   timeout      = var.glue_timeout
-
-  tags = var.tags
-}
-
-# CloudWatch Log Group for Glue job
-resource "aws_cloudwatch_log_group" "glue_analytics_logs" {
-  name              = "/aws-glue/jobs/${aws_glue_job.business_analytics.name}"
-  retention_in_days = 14
-}
-
-# EventBridge rule to trigger Glue job monthly
-resource "aws_cloudwatch_event_rule" "analytics_schedule" {
-  name                = "${var.project_name}-analytics-schedule"
-  description         = "Trigger business analytics job monthly"
-  schedule_expression = "cron(0 9 1 * ? *)"  # First day of every month at 9 AM UTC
-}
-
-resource "aws_cloudwatch_event_target" "glue_job_target" {
-  rule      = aws_cloudwatch_event_rule.analytics_schedule.name
-  target_id = "GlueJobTarget"
-  arn       = "arn:aws:glue:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:job/${aws_glue_job.business_analytics.name}"
-  role_arn  = aws_iam_role.eventbridge_glue_role.arn
-}
-
-# IAM role for EventBridge to trigger Glue job
-resource "aws_iam_role" "eventbridge_glue_role" {
-  name = "${var.project_name}-eventbridge-glue-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "events.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy" "eventbridge_glue_policy" {
-  name = "${var.project_name}-eventbridge-glue-policy"
-  role = aws_iam_role.eventbridge_glue_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "glue:StartJobRun"
-        ]
-        Resource = aws_glue_job.business_analytics.arn
-      }
-    ]
-  })
-}
-
-# SNS topic for job notifications
-resource "aws_sns_topic" "analytics_notifications" {
-  name = "${var.project_name}-analytics-notifications"
-}
-
-resource "aws_sns_topic_policy" "analytics_notifications_policy" {
-  arn = aws_sns_topic.analytics_notifications.arn
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "glue.amazonaws.com"
-        }
-        Action = [
-          "sns:Publish"
-        ]
-        Resource = aws_sns_topic.analytics_notifications.arn
-      }
-    ]
-  })
 }

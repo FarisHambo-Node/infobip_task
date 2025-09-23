@@ -10,6 +10,12 @@ variable "project_name" {
   default     = "infobip-task"
 }
 
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "dev"
+}
+
 variable "data_bucket_arn" {
   description = "ARN of the S3 bucket containing the data files"
   type        = string
