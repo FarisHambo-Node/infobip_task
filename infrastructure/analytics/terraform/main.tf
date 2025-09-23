@@ -30,6 +30,13 @@ resource "aws_s3_object" "business_analytics_job" {
 }
 
 # Upload SQL files
+resource "aws_s3_object" "base_schema_sql" {
+  bucket = aws_s3_bucket.analytics_scripts.id
+  key    = "database/schema.sql"
+  source = "../../../database/schema.sql"
+  etag   = filemd5("../../../database/schema.sql")
+}
+
 resource "aws_s3_object" "analytics_schema_sql" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "sql/analytics_schema.sql"
@@ -171,6 +178,7 @@ resource "aws_glue_job" "business_analytics" {
     "--job-bookmark-option"             = "job-bookmark-disable"
     "--additional-python-modules"       = "psycopg2-binary==2.9.7"
     "--S3_BUCKET"                       = var.data_bucket_name
+    "--ARTIFACTS_BUCKET"                = aws_s3_bucket.analytics_scripts.bucket
     "--DB_HOST"                         = var.rds_endpoint
     "--DB_NAME"                         = var.rds_database_name
     "--DB_USER"                         = var.rds_username
