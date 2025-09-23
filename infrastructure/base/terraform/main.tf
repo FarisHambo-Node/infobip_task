@@ -38,6 +38,7 @@ resource "aws_s3_bucket_versioning" "data_bucket_versioning" {
   }
 }
 
+
 # S3 bucket server-side encryption
 resource "aws_s3_bucket_server_side_encryption_configuration" "data_bucket_encryption" {
   bucket = aws_s3_bucket.data_bucket.id
