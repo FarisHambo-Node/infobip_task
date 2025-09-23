@@ -74,15 +74,16 @@ resource "aws_glue_job" "etl_job" {
   }
 
   default_arguments = {
-    "--job-language" = "python"
-    "--S3_BUCKET"    = var.s3_bucket_name
-    "--DB_HOST"      = var.db_host
-    "--DB_NAME"      = var.db_name
-    "--DB_USER"      = var.db_user
-    "--DB_PASSWORD"  = var.db_password
+    "--job-language"                = "python"
+    "--S3_BUCKET"                  = var.s3_bucket_name
+    "--DB_HOST"                    = var.db_host
+    "--DB_NAME"                    = var.db_name
+    "--DB_USER"                    = var.db_user
+    "--DB_PASSWORD"                = var.db_password
+    "--additional-python-modules"  = "psycopg2-binary==2.9.7"
   }
 
-  max_capacity = 2
+  max_capacity = 10
   timeout      = 30
 
   tags = {

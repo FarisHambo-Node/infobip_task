@@ -52,7 +52,5 @@ CREATE TABLE customers_revenue_by_period (
     revenue_mtd DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     revenue_ytd DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     revenue_increase_pct_qoq DECIMAL(5,2) DEFAULT NULL,
-    
-    -- Foreign key constraint
-    CONSTRAINT fk_customers_revenue_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
