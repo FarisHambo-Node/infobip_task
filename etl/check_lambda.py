@@ -14,6 +14,7 @@ def lambda_handler(event, context):
             database=os.environ["DB_NAME"],
             user=os.environ["DB_USER"],
             password=os.environ["DB_PASSWORD"],
+            ssl_context=True,  # Enable SSL connection
         )
 
         cursor = conn.cursor()

@@ -53,18 +53,9 @@ resource "null_resource" "build_lambda_package" {
   }
 }
 
-# Create zip file for Lambda function
-data "archive_file" "check_lambda_zip" {
-  type        = "zip"
-  source_file = "${path.module}/check_lambda.zip"
-  output_path = "${path.module}/check_lambda.zip"
-  
-  depends_on = [null_resource.build_lambda_package]
-}
-
 # Lambda function for table check
 resource "aws_lambda_function" "check_table" {
-  filename         = data.archive_file.check_lambda_zip.output_path
+  filename         = "${path.module}/check_lambda.zip"
   function_name    = "${var.project_name}-${var.environment}-check-table"
   role            = var.data_processing_role_arn
   handler         = "check_lambda.lambda_handler"
