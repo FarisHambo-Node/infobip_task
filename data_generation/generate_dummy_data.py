@@ -4,24 +4,23 @@ Data Engineering Task - Dummy Data Generator
 Generates dummy data for the 3 required tables and uploads to S3
 """
 
+import logging
 import os
 import random
-import logging
 from datetime import datetime, timedelta
 from io import StringIO
 
 import boto3
 import pandas as pd
-from faker import Faker
 from dotenv import load_dotenv
+from faker import Faker
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -233,10 +232,12 @@ class DummyDataGenerator:
                 )
 
             logger.info(f"Uploaded {table_name} to S3")
-            print(f"Successfully uploaded {table_name} to s3://{self.s3_bucket_name}/{key}")
-            
+            print(
+                f"Successfully uploaded {table_name} to s3://{self.s3_bucket_name}/{key}"
+            )
+
         except Exception as e:
-            logger.error(f"Upload failed: {table_name}")
+            logger.error(f"Upload failed: {table_name}, with error {e}")
             raise
 
     def generate_all_data(self, num_customers=100, num_days=365, upload_to_s3=True):
@@ -259,7 +260,7 @@ class DummyDataGenerator:
             channels_df.to_csv("data/channels.csv", index=False)
             traffic_df.to_csv("data/traffic.csv", index=False)
 
-            print(f"Generated data summary:")
+            print("Generated data summary:")
             print(f"- Customers: {len(customers_df)} records")
             print(f"- Channels: {len(channels_df)} records")
             print(f"- Traffic: {len(traffic_df)} records")
