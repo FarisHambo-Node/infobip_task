@@ -1,0 +1,4 @@
+# Requirements for the analytics Glue job
+psycopg2-binary==2.9.7
+pandas==2.0.3
+boto3==1.28.25
