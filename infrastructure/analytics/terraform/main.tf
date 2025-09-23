@@ -26,6 +26,7 @@ resource "aws_s3_object" "business_analytics_job" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "glue_jobs/business_analytics_job.py"
   source = "../../../analytics/glue_jobs/business_analytics_job.py"
+  etag   = filemd5("../../../analytics/glue_jobs/business_analytics_job.py")
 }
 
 # Upload SQL files
@@ -33,36 +34,42 @@ resource "aws_s3_object" "analytics_schema_sql" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "sql/analytics_schema.sql"
   source = "../../../analytics/sql/analytics_schema.sql"
+  etag   = filemd5("../../../analytics/sql/analytics_schema.sql")
 }
 
 resource "aws_s3_object" "question_1_sql" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "sql/question_1_industry_exposure.sql"
   source = "../../../analytics/sql/question_1_industry_exposure.sql"
+  etag   = filemd5("../../../analytics/sql/question_1_industry_exposure.sql")
 }
 
 resource "aws_s3_object" "question_2_sql" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "sql/question_2_segment_analysis.sql"
   source = "../../../analytics/sql/question_2_segment_analysis.sql"
+  etag   = filemd5("../../../analytics/sql/question_2_segment_analysis.sql")
 }
 
 resource "aws_s3_object" "question_3_sql" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "sql/question_3_recent_customers.sql"
   source = "../../../analytics/sql/question_3_recent_customers.sql"
+  etag   = filemd5("../../../analytics/sql/question_3_recent_customers.sql")
 }
 
 resource "aws_s3_object" "question_4_sql" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "sql/question_4_top_customers.sql"
   source = "../../../analytics/sql/question_4_top_customers.sql"
+  etag   = filemd5("../../../analytics/sql/question_4_top_customers.sql")
 }
 
 resource "aws_s3_object" "question_5_sql" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "sql/question_5_monthly_active_customers.sql"
   source = "../../../analytics/sql/question_5_monthly_active_customers.sql"
+  etag   = filemd5("../../../analytics/sql/question_5_monthly_active_customers.sql")
 }
 
 # IAM role for Glue job
@@ -160,6 +167,7 @@ resource "aws_glue_job" "business_analytics" {
 
   default_arguments = {
     "--job-language"                    = "python"
+    "--enable-job-insights"             = "true"
     "--job-bookmark-option"             = "job-bookmark-disable"
     "--additional-python-modules"       = "psycopg2-binary==2.9.7"
     "--S3_BUCKET"                       = var.data_bucket_name
