@@ -56,8 +56,17 @@
             "Next": "ETLSuccess"
         },
         "ETLSuccess": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::states:startExecution.sync",
+            "Parameters": {
+                "StateMachineArn": "${analytics_pipeline_arn}",
+                "Input": "{}"
+            },
+            "Next": "ETLCompleted"
+        },
+        "ETLCompleted": {
             "Type": "Succeed",
-            "Comment": "ETL pipeline completed successfully"
+            "Comment": "ETL and Analytics pipelines completed successfully"
         },
         "ETLFailed": {
             "Type": "Fail",

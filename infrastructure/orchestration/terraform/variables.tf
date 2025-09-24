@@ -53,3 +53,8 @@ variable "descriptive_statistics_job_name" {
   description = "Name of the descriptive statistics Glue job"
   type        = string
 }
+
+variable "analytics_pipeline_arn" {
+  description = "ARN of the analytics pipeline Step Function"
+  type        = string
+}

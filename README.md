@@ -7,13 +7,13 @@ Data processing system on AWS with ETL pipelines, business analytics, and statis
 ### Components
 - **Base Infrastructure**: RDS PostgreSQL, S3 buckets, VPC, IAM roles
 - **ETL Pipeline**: AWS Glue job for data loading and Lambda for validation
-- **Analytics Pipeline**: Business queries and statistical analysis
+- **Analytics Pipeline**: Business queries and statistical analysis (triggered by ETL completion)
 - **Orchestration**: Step Functions for workflow execution and EventBridge scheduling
 
 ### Data Flow
 1. Data Generation → CSV files (customers, traffic, channels)
 2. ETL Pipeline → Data loading into PostgreSQL
-3. Analytics Pipeline → Business queries and statistics
+3. Analytics Pipeline → Business queries and statistics (automatically triggered by ETL success)
 4. Orchestration → Automated execution
 
 ## Deployment

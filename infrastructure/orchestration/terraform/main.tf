@@ -70,6 +70,16 @@ resource "aws_iam_policy" "step_functions_policy" {
       {
         Effect = "Allow"
         Action = [
+          "states:StartExecution"
+        ]
+        Resource = [
+          aws_sfn_state_machine.etl_pipeline.arn,
+          aws_sfn_state_machine.analytics_pipeline.arn
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
@@ -92,8 +102,9 @@ resource "aws_sfn_state_machine" "etl_pipeline" {
   role_arn = aws_iam_role.step_functions_role.arn
 
   definition = templatefile("${path.module}/etl_pipeline.json", {
-    glue_job_name      = var.glue_job_name
-    lambda_function_arn = var.lambda_function_arn
+    glue_job_name        = var.glue_job_name
+    lambda_function_arn  = var.lambda_function_arn
+    analytics_pipeline_arn = aws_sfn_state_machine.analytics_pipeline.arn
   })
 
   tags = {
