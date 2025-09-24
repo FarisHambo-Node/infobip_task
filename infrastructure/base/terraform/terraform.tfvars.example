@@ -1,4 +1,13 @@
-# Copy this file to terraform.tfvars and update with your values
+# Base Infrastructure Terraform Variables
+# Copy this file to terraform.tfvars and update the values
+
+# General configuration
 aws_region   = "eu-north-1"
-project_name = "project-name"
+project_name = "data-engineering-task"
 environment  = "dev"
+
+# Database configuration
+db_instance_class     = "db.t4g.micro"
+db_allocated_storage  = 20
+db_username          = "your_db_username"
+db_password          = "your_secure_password"

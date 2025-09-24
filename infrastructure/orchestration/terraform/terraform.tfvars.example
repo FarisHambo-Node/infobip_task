@@ -1,0 +1,19 @@
+# Orchestration Infrastructure Terraform Variables
+# Copy this file to terraform.tfvars and update the values
+# These values come from ETL and Analytics Infrastructure outputs
+
+# General configuration
+aws_region   = "eu-north-1"
+project_name = "data-engineering-task"
+environment  = "dev"
+
+# ETL Resources (from ETL Infrastructure)
+glue_job_arn        = "arn:aws:glue:eu-north-1:123456789012:job/data-engineering-task-dev-etl-glue-job"
+glue_job_name       = "data-engineering-task-dev-etl-glue-job"
+lambda_function_arn = "arn:aws:lambda:eu-north-1:123456789012:function:data-engineering-task-dev-check-table"
+
+# Analytics Resources (from Analytics Infrastructure)
+business_analytics_job_arn      = "arn:aws:glue:eu-north-1:123456789012:job/data-engineering-task-business-analytics"
+business_analytics_job_name     = "data-engineering-task-business-analytics"
+descriptive_statistics_job_arn  = "arn:aws:glue:eu-north-1:123456789012:job/data-engineering-task-descriptive-statistics"
+descriptive_statistics_job_name = "data-engineering-task-descriptive-statistics"
