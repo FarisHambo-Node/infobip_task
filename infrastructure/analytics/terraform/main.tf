@@ -21,12 +21,19 @@ resource "random_id" "bucket_suffix" {
   byte_length = 4
 }
 
-# Upload Glue job script
+# Upload Glue job scripts
 resource "aws_s3_object" "business_analytics_job" {
   bucket = aws_s3_bucket.analytics_scripts.id
   key    = "glue_jobs/business_analytics_job.py"
   source = "../../../analytics/glue_jobs/business_analytics_job.py"
   etag   = filemd5("../../../analytics/glue_jobs/business_analytics_job.py")
+}
+
+resource "aws_s3_object" "descriptive_statistics_job" {
+  bucket = aws_s3_bucket.analytics_scripts.id
+  key    = "glue_jobs/descriptive_statistics_job.py"
+  source = "../../../analytics/glue_jobs/descriptive_statistics_job.py"
+  etag   = filemd5("../../../analytics/glue_jobs/descriptive_statistics_job.py")
 }
 
 # Upload SQL files
@@ -77,6 +84,13 @@ resource "aws_s3_object" "question_5_sql" {
   key    = "sql/question_5_monthly_active_customers.sql"
   source = "../../../analytics/sql/question_5_monthly_active_customers.sql"
   etag   = filemd5("../../../analytics/sql/question_5_monthly_active_customers.sql")
+}
+
+resource "aws_s3_object" "descriptive_statistics_schema_sql" {
+  bucket = aws_s3_bucket.analytics_scripts.id
+  key    = "sql/descriptive_statistics_schema.sql"
+  source = "../../../analytics/sql/descriptive_statistics_schema.sql"
+  etag   = filemd5("../../../analytics/sql/descriptive_statistics_schema.sql")
 }
 
 # IAM role for Glue job
@@ -169,6 +183,34 @@ resource "aws_glue_job" "business_analytics" {
 
   command {
     script_location = "s3://${aws_s3_bucket.analytics_scripts.bucket}/glue_jobs/business_analytics_job.py"
+    python_version  = "3"
+  }
+
+  default_arguments = {
+    "--job-language"                    = "python"
+    "--enable-job-insights"             = "true"
+    "--job-bookmark-option"             = "job-bookmark-disable"
+    "--additional-python-modules"       = "psycopg2-binary==2.9.7"
+    "--S3_BUCKET"                       = var.data_bucket_name
+    "--ARTIFACTS_BUCKET"                = aws_s3_bucket.analytics_scripts.bucket
+    "--DB_HOST"                         = var.rds_endpoint
+    "--DB_NAME"                         = var.rds_database_name
+    "--DB_USER"                         = var.rds_username
+    "--DB_PASSWORD"                     = var.rds_password
+  }
+
+  max_capacity = var.glue_max_capacity
+  timeout      = var.glue_timeout
+}
+
+# Glue job for descriptive statistics
+resource "aws_glue_job" "descriptive_statistics" {
+  name         = "${var.project_name}-descriptive-statistics"
+  role_arn     = aws_iam_role.glue_analytics_role.arn
+  glue_version = "4.0"
+
+  command {
+    script_location = "s3://${aws_s3_bucket.analytics_scripts.bucket}/glue_jobs/descriptive_statistics_job.py"
     python_version  = "3"
   }
 

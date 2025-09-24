@@ -30,3 +30,14 @@ output "eventbridge_role_arn" {
   description = "ARN of the EventBridge IAM role"
   value       = aws_iam_role.eventbridge_role.arn
 }
+
+# Analytics Pipeline Step Functions State Machine
+output "analytics_pipeline_state_machine_arn" {
+  description = "ARN of the Analytics Pipeline Step Functions state machine"
+  value       = aws_sfn_state_machine.analytics_pipeline.arn
+}
+
+output "analytics_pipeline_state_machine_name" {
+  description = "Name of the Analytics Pipeline Step Functions state machine"
+  value       = aws_sfn_state_machine.analytics_pipeline.name
+}

@@ -1,0 +1,70 @@
+{
+    "Comment": "Analytics Pipeline: Business Analytics -> Descriptive Statistics",
+    "StartAt": "RunBusinessAnalyticsJob",
+    "States": {
+        "RunBusinessAnalyticsJob": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::glue:startJobRun.sync",
+            "Parameters": {
+                "JobName": "${business_analytics_job_name}"
+            },
+            "TimeoutSeconds": 1800,
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "IntervalSeconds": 30,
+                    "MaxAttempts": 2,
+                    "BackoffRate": 2.0
+                }
+            ],
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "Next": "AnalyticsFailed",
+                    "ResultPath": "$.error"
+                }
+            ],
+            "Next": "RunDescriptiveStatisticsJob"
+        },
+        "RunDescriptiveStatisticsJob": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::glue:startJobRun.sync",
+            "Parameters": {
+                "JobName": "${descriptive_statistics_job_name}"
+            },
+            "TimeoutSeconds": 1800,
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "IntervalSeconds": 30,
+                    "MaxAttempts": 2,
+                    "BackoffRate": 2.0
+                }
+            ],
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "Next": "AnalyticsFailed",
+                    "ResultPath": "$.error"
+                }
+            ],
+            "Next": "AnalyticsSuccess"
+        },
+        "AnalyticsSuccess": {
+            "Type": "Succeed",
+            "Comment": "Analytics pipeline completed successfully"
+        },
+        "AnalyticsFailed": {
+            "Type": "Fail",
+            "Comment": "Analytics pipeline failed"
+        }
+    }
+}
