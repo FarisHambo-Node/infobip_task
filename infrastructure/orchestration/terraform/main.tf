@@ -54,7 +54,11 @@ resource "aws_iam_policy" "step_functions_policy" {
           "glue:GetJobRuns",
           "glue:BatchStopJobRun"
         ]
-        Resource = var.glue_job_arn
+        Resource = [
+          var.glue_job_arn,
+          var.business_analytics_job_arn,
+          var.descriptive_statistics_job_arn
+        ]
       },
       {
         Effect = "Allow"
@@ -62,6 +66,16 @@ resource "aws_iam_policy" "step_functions_policy" {
           "lambda:InvokeFunction"
         ]
         Resource = var.lambda_function_arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "states:StartExecution"
+        ]
+        Resource = [
+          aws_sfn_state_machine.etl_pipeline.arn,
+          aws_sfn_state_machine.analytics_pipeline.arn
+        ]
       },
       {
         Effect = "Allow"
@@ -82,69 +96,15 @@ resource "aws_iam_role_policy_attachment" "step_functions_policy_attachment" {
   policy_arn = aws_iam_policy.step_functions_policy.arn
 }
 
-# Step Functions State Machine
+# ETL Pipeline Step Functions State Machine
 resource "aws_sfn_state_machine" "etl_pipeline" {
   name     = "${var.project_name}-${var.environment}-etl-pipeline"
   role_arn = aws_iam_role.step_functions_role.arn
 
-  definition = jsonencode({
-    Comment = "Simple ETL Pipeline: Glue Job -> Lambda Check"
-    StartAt = "RunGlueJob"
-    States = {
-      RunGlueJob = {
-        Type = "Task"
-        Resource = "arn:aws:states:::glue:startJobRun.sync"
-        Parameters = {
-          JobName = var.glue_job_name
-        }
-        TimeoutSeconds = 1800
-        Retry = [
-          {
-            ErrorEquals = ["States.ALL"]
-            IntervalSeconds = 30
-            MaxAttempts = 2
-            BackoffRate = 2.0
-          }
-        ]
-        Catch = [
-          {
-            ErrorEquals = ["States.ALL"]
-            Next = "ETLFailed"
-            ResultPath = "$.error"
-          }
-        ]
-        Next = "CheckTable"
-      }
-      CheckTable = {
-        Type = "Task"
-        Resource = var.lambda_function_arn
-        TimeoutSeconds = 60
-        Retry = [
-          {
-            ErrorEquals = ["States.ALL"]
-            IntervalSeconds = 5
-            MaxAttempts = 2
-            BackoffRate = 2.0
-          }
-        ]
-        Catch = [
-          {
-            ErrorEquals = ["States.ALL"]
-            Next = "ETLFailed"
-            ResultPath = "$.error"
-          }
-        ]
-        Next = "ETLSuccess"
-      }
-      ETLSuccess = {
-        Type = "Succeed"
-        Comment = "ETL pipeline completed successfully"
-      }
-      ETLFailed = {
-        Type = "Fail"
-        Comment = "ETL pipeline failed"
-      }
-    }
+  definition = templatefile("${path.module}/etl_pipeline.json", {
+    glue_job_name        = var.glue_job_name
+    lambda_function_arn  = var.lambda_function_arn
+    analytics_pipeline_arn = aws_sfn_state_machine.analytics_pipeline.arn
   })
 
   tags = {
@@ -226,6 +186,23 @@ resource "aws_iam_policy" "eventbridge_policy" {
 resource "aws_iam_role_policy_attachment" "eventbridge_policy_attachment" {
   role       = aws_iam_role.eventbridge_role.name
   policy_arn = aws_iam_policy.eventbridge_policy.arn
+}
+
+# Analytics Pipeline Step Functions State Machine
+resource "aws_sfn_state_machine" "analytics_pipeline" {
+  name     = "${var.project_name}-${var.environment}-analytics-pipeline"
+  role_arn = aws_iam_role.step_functions_role.arn
+
+  definition = templatefile("${path.module}/analytics_pipeline.json", {
+    business_analytics_job_name      = var.business_analytics_job_name
+    descriptive_statistics_job_name  = var.descriptive_statistics_job_name
+  })
+
+  tags = {
+    Name        = "Analytics Pipeline State Machine"
+    Environment = var.environment
+    Project     = var.project_name
+  }
 }
 
 # Data source for current AWS account ID

@@ -1,0 +1,20 @@
+# Analytics Infrastructure Terraform Variables
+# Copy this file to terraform.tfvars and update the values
+# These values come from Base Infrastructure outputs
+
+# General configuration
+aws_region   = "eu-north-1"
+project_name = "data-engineering-task"
+environment  = "dev"
+
+# S3 and Database (from Base Infrastructure)
+data_bucket_arn      = "arn:aws:s3:::your-project-data-bucket"
+data_bucket_name     = "your-project-data-bucket"
+rds_endpoint        = "your-rds-endpoint.region.rds.amazonaws.com"
+rds_database_name   = "your_database_name"
+rds_username        = "your_db_username"
+rds_password        = "your_secure_password"
+
+# Glue job configuration
+glue_max_capacity = 2
+glue_timeout      = 60

@@ -1,0 +1,19 @@
+# ETL Infrastructure Terraform Variables
+# Copy this file to terraform.tfvars and update the values
+# These values come from Base Infrastructure outputs
+
+# General configuration
+aws_region   = "eu-north-1"
+project_name = "data-engineering-task"
+environment  = "dev"
+
+# Database connection (from Base Infrastructure)
+db_host     = "your-rds-endpoint.region.rds.amazonaws.com"
+db_name     = "your_database_name"
+db_user     = "your_db_username"
+db_password = "your_secure_password"
+
+# S3 and IAM (from Base Infrastructure)
+s3_bucket_name                = "your-project-data-bucket"
+data_processing_role_arn      = "arn:aws:iam::123456789012:role/your-data-processing-role"
+s3_data_access_policy_arn     = "arn:aws:iam::123456789012:policy/your-s3-data-access-policy"
