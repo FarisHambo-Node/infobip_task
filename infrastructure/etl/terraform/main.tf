@@ -23,6 +23,7 @@ resource "aws_s3_object" "glue_script" {
   bucket = var.s3_bucket_name
   key    = "scripts/glue_job.py"
   source = "${path.module}/../../../etl/glue_job.py"
+  etag   = filemd5("${path.module}/../../../etl/glue_job.py")
   
   tags = {
     Name        = "Glue ETL Script"
