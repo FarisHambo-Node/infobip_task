@@ -23,3 +23,14 @@ output "glue_analytics_role_arn" {
   value       = aws_iam_role.glue_analytics_role.arn
 }
 
+output "glue_descriptive_statistics_job_name" {
+  description = "Name of the Glue descriptive statistics job"
+  value       = aws_glue_job.descriptive_statistics.name
+}
+
+output "glue_descriptive_statistics_job_arn" {
+  description = "ARN of the Glue descriptive statistics job"
+  value       = aws_glue_job.descriptive_statistics.arn
+}
+
+

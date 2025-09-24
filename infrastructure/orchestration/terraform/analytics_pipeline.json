@@ -1,10 +1,13 @@
 {
-    "Comment": "Simple ETL Pipeline: Glue Job -> Lambda Check",
-    "StartAt": "RunGlueJob",
+    "Comment": "Analytics Pipeline: Business Analytics -> Descriptive Statistics",
+    "StartAt": "RunBusinessAnalyticsJob",
     "States": {
-        "RunGlueJob": {
+        "RunBusinessAnalyticsJob": {
             "Type": "Task",
-            "Resource": "arn:aws:glue:${AWS_REGION}:${AWS_ACCOUNT_ID}:job/infobip-etl-glue-job",
+            "Resource": "arn:aws:states:::glue:startJobRun.sync",
+            "Parameters": {
+                "JobName": "${business_analytics_job_name}"
+            },
             "TimeoutSeconds": 1800,
             "Retry": [
                 {
@@ -21,22 +24,25 @@
                     "ErrorEquals": [
                         "States.ALL"
                     ],
-                    "Next": "ETLFailed",
+                    "Next": "AnalyticsFailed",
                     "ResultPath": "$.error"
                 }
             ],
-            "Next": "CheckTable"
+            "Next": "RunDescriptiveStatisticsJob"
         },
-        "CheckTable": {
+        "RunDescriptiveStatisticsJob": {
             "Type": "Task",
-            "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:infobip-check-table",
-            "TimeoutSeconds": 60,
+            "Resource": "arn:aws:states:::glue:startJobRun.sync",
+            "Parameters": {
+                "JobName": "${descriptive_statistics_job_name}"
+            },
+            "TimeoutSeconds": 1800,
             "Retry": [
                 {
                     "ErrorEquals": [
                         "States.ALL"
                     ],
-                    "IntervalSeconds": 5,
+                    "IntervalSeconds": 30,
                     "MaxAttempts": 2,
                     "BackoffRate": 2.0
                 }
@@ -46,19 +52,19 @@
                     "ErrorEquals": [
                         "States.ALL"
                     ],
-                    "Next": "ETLFailed",
+                    "Next": "AnalyticsFailed",
                     "ResultPath": "$.error"
                 }
             ],
-            "Next": "ETLSuccess"
+            "Next": "AnalyticsSuccess"
         },
-        "ETLSuccess": {
+        "AnalyticsSuccess": {
             "Type": "Succeed",
-            "Comment": "ETL pipeline completed successfully"
+            "Comment": "Analytics pipeline completed successfully"
         },
-        "ETLFailed": {
+        "AnalyticsFailed": {
             "Type": "Fail",
-            "Comment": "ETL pipeline failed"
+            "Comment": "Analytics pipeline failed"
         }
     }
 }
