@@ -1,11 +1,12 @@
 -- Descriptive Statistics Schema
--- This schema stores descriptive statistics for all numeric columns across all tables
+-- This schema stores descriptive statistics for industry_exposure table and extended categories
 
 -- Create descriptive statistics schema
 CREATE SCHEMA IF NOT EXISTS descriptive_statistics;
 
 -- Table for storing descriptive statistics summary
-CREATE TABLE IF NOT EXISTS descriptive_statistics.column_statistics (
+DROP TABLE IF EXISTS descriptive_statistics.column_statistics CASCADE;
+CREATE TABLE descriptive_statistics.column_statistics (
     id SERIAL PRIMARY KEY,
     table_name VARCHAR(100) NOT NULL,
     column_name VARCHAR(100) NOT NULL,
@@ -22,10 +23,13 @@ CREATE TABLE IF NOT EXISTS descriptive_statistics.column_statistics (
     CONSTRAINT uk_table_column UNIQUE (table_name, column_name)
 );
 
--- Index for better performance
-CREATE INDEX IF NOT EXISTS idx_column_statistics_table 
-ON descriptive_statistics.column_statistics(table_name);
-
-CREATE INDEX IF NOT EXISTS idx_column_statistics_updated 
-ON descriptive_statistics.column_statistics(last_updated DESC);
-
+-- Extended industry exposure table with categories
+DROP TABLE IF EXISTS descriptive_statistics.industry_exposure_extended CASCADE;
+CREATE TABLE descriptive_statistics.industry_exposure_extended (
+    industry VARCHAR(100) PRIMARY KEY,
+    total_revenue DECIMAL(15,2) NOT NULL,
+    customer_count INTEGER NOT NULL,
+    total_revenue_category VARCHAR(10) NOT NULL,
+    customer_count_category VARCHAR(10) NOT NULL,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
