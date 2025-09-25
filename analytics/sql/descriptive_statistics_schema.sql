@@ -21,11 +21,3 @@ CREATE TABLE IF NOT EXISTS descriptive_statistics.column_statistics (
     -- Unique constraint to prevent duplicates
     CONSTRAINT uk_table_column UNIQUE (table_name, column_name)
 );
-
--- Index for better performance
-CREATE INDEX IF NOT EXISTS idx_column_statistics_table 
-ON descriptive_statistics.column_statistics(table_name);
-
-CREATE INDEX IF NOT EXISTS idx_column_statistics_updated 
-ON descriptive_statistics.column_statistics(last_updated DESC);
-
