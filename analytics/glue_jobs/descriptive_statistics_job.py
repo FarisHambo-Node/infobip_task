@@ -17,6 +17,8 @@ from pyspark.sql.functions import (
     stddev,
     count,
     expr,
+    when,
+    percentile_approx,
 )
 from pyspark.sql.types import (
     StructType,
@@ -272,10 +274,82 @@ def save_statistics_to_database(statistics_results, cursor):
         raise
 
 
-def analyze_all_tables():
-    """Analyze all tables and calculate descriptive statistics"""
-    logger.info("Starting descriptive statistics analysis for all tables...")
-    print("Starting descriptive statistics analysis for all tables...")
+def create_industry_exposure_extended(cursor):
+    """Create industry_exposure_extended table with categories using PySpark logic + cursor insert"""
+    logger.info("Creating industry_exposure_extended table with categories using PySpark...")
+    
+    try:
+        # Load industry_exposure data using Spark
+        df = get_table_data_from_rds("business_analytics.industry_exposure")
+        
+        # Calculate quantiles using PySpark
+        logger.info("Calculating quantiles using PySpark...")
+        
+        # Calculate Q1 and Q3 for total_revenue and customer_count in one go
+        quantiles_df = df.select(
+            percentile_approx("total_revenue", 0.25).alias("q1_revenue"),
+            percentile_approx("total_revenue", 0.75).alias("q3_revenue"),
+            percentile_approx("customer_count", 0.25).alias("q1_customers"),
+            percentile_approx("customer_count", 0.75).alias("q3_customers")
+        ).collect()[0]
+        
+        q1_revenue = quantiles_df["q1_revenue"]
+        q3_revenue = quantiles_df["q3_revenue"]
+        q1_customers = quantiles_df["q1_customers"]
+        q3_customers = quantiles_df["q3_customers"]
+        
+        logger.info(f"Quantiles calculated - Revenue Q1: {q1_revenue}, Q3: {q3_revenue}")
+        logger.info(f"Quantiles calculated - Customers Q1: {q1_customers}, Q3: {q3_customers}")
+        
+        # Add categories using PySpark
+        df_with_categories = df.withColumn(
+            "total_revenue_category",
+            when(col("total_revenue") <= q1_revenue, "Low")
+            .when(col("total_revenue") <= q3_revenue, "Mid")
+            .otherwise("High")
+        ).withColumn(
+            "customer_count_category",
+            when(col("customer_count") <= q1_customers, "Low")
+            .when(col("customer_count") <= q3_customers, "Mid")
+            .otherwise("High")
+        )
+        
+        # Convert to Pandas for cursor insert (like the statistics style)
+        pandas_df = df_with_categories.toPandas()
+        
+        # Clear existing extended table
+        cursor.execute("TRUNCATE TABLE descriptive_statistics.industry_exposure_extended;")
+        
+        # Insert data using cursor (same style as statistics)
+        logger.info("Inserting categorized data into database...")
+        for _, row in pandas_df.iterrows():
+            cursor.execute("""
+                INSERT INTO descriptive_statistics.industry_exposure_extended 
+                (industry, total_revenue, customer_count, total_revenue_category, customer_count_category)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                row["industry"],
+                float(row["total_revenue"]),
+                int(row["customer_count"]),
+                row["total_revenue_category"],
+                row["customer_count_category"]
+            ))
+        
+        # Get count of inserted records
+        cursor.execute("SELECT COUNT(*) FROM descriptive_statistics.industry_exposure_extended")
+        count = cursor.fetchone()[0]
+        
+        logger.info(f"Successfully created industry_exposure_extended with {count} records using PySpark + cursor")
+        
+    except Exception as e:
+        logger.error(f"Failed to create industry_exposure_extended: {str(e)}")
+        raise
+
+
+def analyze_industry_exposure():
+    """Analyze industry_exposure table and calculate descriptive statistics with categories"""
+    logger.info("Starting descriptive statistics analysis for industry_exposure table...")
+    print("Starting descriptive statistics analysis for industry_exposure table...")
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -285,53 +359,39 @@ def analyze_all_tables():
         artifacts_bucket = args["ARTIFACTS_BUCKET"]
         setup_descriptive_statistics_schema(cursor, artifacts_bucket)
 
-        # Define all tables to analyze
-        tables_to_analyze = [
-            # Base tables
-            "customers",
-            "channels",
-            "traffic",
-            "customers_revenue_by_period",
-            # Analytics tables
-            "business_analytics.industry_exposure",
-            "business_analytics.segment_analysis",
-            "business_analytics.recent_customers",
-            "business_analytics.top_customers",
-            "business_analytics.monthly_active_customers",
-        ]
+        # Analyze industry_exposure table
+        table_name = "business_analytics.industry_exposure"
+        
+        try:
+            logger.info(f"Analyzing table: {table_name}")
 
-        all_statistics = []
+            # Load table data directly with Spark
+            df = get_table_data_from_rds(table_name)
 
-        for table_name in tables_to_analyze:
-            try:
-                logger.info(f"Analyzing table: {table_name}")
+            # Calculate statistics
+            table_statistics = calculate_descriptive_statistics(df, table_name)
 
-                # Load table data directly with Spark
-                df = get_table_data_from_rds(table_name)
+            # Save statistics to database
+            if table_statistics:
+                save_statistics_to_database(table_statistics, cursor)
+                
+                # Create industry_exposure_extended table with categories
+                create_industry_exposure_extended(cursor)
+                
+                conn.commit()
+                logger.info(
+                    f"Descriptive statistics analysis completed successfully. Processed {len(table_statistics)} numeric columns."
+                )
+                print(
+                    f"Descriptive statistics analysis completed successfully. Processed {len(table_statistics)} numeric columns."
+                )
+            else:
+                logger.warning("No statistics were calculated")
+                print("No statistics were calculated")
 
-                # Calculate statistics
-                table_statistics = calculate_descriptive_statistics(df, table_name)
-                all_statistics.extend(table_statistics)
-
-                logger.info(f"Completed analysis for {table_name}")
-
-            except Exception as e:
-                logger.error(f"Failed to analyze table {table_name}: {str(e)}")
-                continue
-
-        # Save all statistics to database
-        if all_statistics:
-            save_statistics_to_database(all_statistics, cursor)
-            conn.commit()
-            logger.info(
-                f"Descriptive statistics analysis completed successfully. Processed {len(all_statistics)} numeric columns."
-            )
-            print(
-                f"Descriptive statistics analysis completed successfully. Processed {len(all_statistics)} numeric columns."
-            )
-        else:
-            logger.warning("No statistics were calculated")
-            print("No statistics were calculated")
+        except Exception as e:
+            logger.error(f"Failed to analyze table {table_name}: {str(e)}")
+            raise
 
     except Exception as e:
         conn.rollback()
@@ -350,8 +410,8 @@ def main():
     print(f"Starting descriptive statistics job at {datetime.now()}")
 
     try:
-        # Analyze all tables and calculate descriptive statistics
-        analyze_all_tables()
+        # Analyze industry_exposure table and calculate descriptive statistics with categories
+        analyze_industry_exposure()
 
         logger.info(
             f"Descriptive statistics job completed successfully at {datetime.now()}"
