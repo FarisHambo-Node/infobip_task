@@ -139,73 +139,68 @@ def main():
         logger.info("Calculating date ranges...")
         date_ranges = calculate_date_ranges()
 
-        # Get unique customers
-        logger.info("Getting unique customers...")
-        customers = traffic_pandas["customer_id"].unique()
-        results = []
+        # Calculate revenue metrics using pandas aggregation
+        logger.info("Calculating revenue metrics using aggregation...")
+        print("Calculating revenue metrics using aggregation...")
 
-        logger.info(f"Processing {len(customers)} customers...")
-        print(f"Processing {len(customers)} customers...")
+        # Create period flags for efficient filtering
+        traffic_pandas['is_last_month'] = (
+            (traffic_pandas["send_date"] >= date_ranges["last_month_start"]) &
+            (traffic_pandas["send_date"] < date_ranges["mtd_start"])
+        )
+        
+        traffic_pandas['is_last_quarter'] = (
+            (traffic_pandas["send_date"] >= date_ranges["last_quarter_start"]) &
+            (traffic_pandas["send_date"] < date_ranges["current_quarter_start"])
+        )
+        
+        traffic_pandas['is_mtd'] = (
+            traffic_pandas["send_date"] >= date_ranges["mtd_start"]
+        )
+        
+        traffic_pandas['is_ytd'] = (
+            traffic_pandas["send_date"] >= date_ranges["ytd_start"]
+        )
+        
+        traffic_pandas['is_current_quarter'] = (
+            traffic_pandas["send_date"] >= date_ranges["current_quarter_start"]
+        )
+        
+        traffic_pandas['is_prev_quarter'] = (
+            (traffic_pandas["send_date"] >= date_ranges["prev_quarter_start"]) &
+            (traffic_pandas["send_date"] < date_ranges["current_quarter_start"])
+        )
 
-        for i, customer_id in enumerate(customers):
-            if i % 100 == 0:  # Log every 100 customers
-                logger.info(
-                    f"Processing customer {i+1}/{len(customers)}: {customer_id}"
-                )
-            customer_traffic = traffic_pandas[
-                traffic_pandas["customer_id"] == customer_id
+        # Aggregate revenue by customer using lambda functions
+        revenue_metrics = traffic_pandas.groupby('customer_id').agg({
+            'revenue_eur': [
+                ('revenue_last_month', lambda x: x[traffic_pandas.loc[x.index, 'is_last_month']].sum()),
+                ('revenue_last_quarter', lambda x: x[traffic_pandas.loc[x.index, 'is_last_quarter']].sum()),
+                ('revenue_mtd', lambda x: x[traffic_pandas.loc[x.index, 'is_mtd']].sum()),
+                ('revenue_ytd', lambda x: x[traffic_pandas.loc[x.index, 'is_ytd']].sum()),
+                ('revenue_current_quarter', lambda x: x[traffic_pandas.loc[x.index, 'is_current_quarter']].sum()),
+                ('revenue_prev_quarter', lambda x: x[traffic_pandas.loc[x.index, 'is_prev_quarter']].sum())
             ]
+        }).round(2)
 
-            # Calculate revenue for different periods
-            revenue_last_month = customer_traffic[
-                (customer_traffic["send_date"] >= date_ranges["last_month_start"])
-                & (customer_traffic["send_date"] < date_ranges["mtd_start"])
-            ]["revenue_eur"].sum()
+        # Flatten column names
+        revenue_metrics.columns = revenue_metrics.columns.droplevel(0)
+        revenue_metrics = revenue_metrics.reset_index()
 
-            revenue_last_quarter = customer_traffic[
-                (customer_traffic["send_date"] >= date_ranges["last_quarter_start"])
-                & (customer_traffic["send_date"] < date_ranges["current_quarter_start"])
-            ]["revenue_eur"].sum()
+        # Calculate quarter-over-quarter percentage
+        revenue_metrics['revenue_increase_pct_qoq'] = revenue_metrics.apply(
+            lambda row: round(
+                ((row['revenue_current_quarter'] - row['revenue_prev_quarter']) / row['revenue_prev_quarter'] * 100)
+                if row['revenue_prev_quarter'] > 0 else 0.0, 2
+            ), axis=1
+        )
 
-            revenue_mtd = customer_traffic[
-                customer_traffic["send_date"] >= date_ranges["mtd_start"]
-            ]["revenue_eur"].sum()
+        # Drop temporary columns and convert to list of dictionaries
+        revenue_metrics = revenue_metrics.drop(['revenue_current_quarter', 'revenue_prev_quarter'], axis=1)
+        results = revenue_metrics.to_dict('records')
 
-            revenue_ytd = customer_traffic[
-                customer_traffic["send_date"] >= date_ranges["ytd_start"]
-            ]["revenue_eur"].sum()
-
-            # Calculate quarter-over-quarter percentage
-            current_quarter_revenue = customer_traffic[
-                customer_traffic["send_date"] >= date_ranges["current_quarter_start"]
-            ]["revenue_eur"].sum()
-
-            prev_quarter_revenue = customer_traffic[
-                (customer_traffic["send_date"] >= date_ranges["prev_quarter_start"])
-                & (customer_traffic["send_date"] < date_ranges["current_quarter_start"])
-            ]["revenue_eur"].sum()
-
-            if prev_quarter_revenue > 0:
-                revenue_increase_pct_qoq = (
-                    (current_quarter_revenue - prev_quarter_revenue)
-                    / prev_quarter_revenue
-                ) * 100
-            else:
-                revenue_increase_pct_qoq = 0.0
-
-            results.append(
-                {
-                    "customer_id": int(customer_id),
-                    "revenue_last_month": round(revenue_last_month, 2),
-                    "revenue_last_quarter": round(revenue_last_quarter, 2),
-                    "revenue_mtd": round(revenue_mtd, 2),
-                    "revenue_ytd": round(revenue_ytd, 2),
-                    "revenue_increase_pct_qoq": round(revenue_increase_pct_qoq, 2),
-                }
-            )
-
-        logger.info(f"Calculated revenue metrics for {len(results)} customers")
-        print(f"Calculated revenue metrics for {len(results)} customers")
+        logger.info(f"Calculated revenue metrics for {len(results)} customers using vectorized operations")
+        print(f"Calculated revenue metrics for {len(results)} customers using vectorized operations")
 
         # Connect to RDS and upsert data
         logger.info("Connecting to RDS database...")

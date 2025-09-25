@@ -298,10 +298,10 @@ def execute_business_queries():
             cursor.execute(
                 """
                 INSERT INTO business_analytics.industry_exposure 
-                (industry, total_revenue, customer_count, avg_revenue_per_transaction, revenue_share_percentage)
-                VALUES (%s, %s, %s, %s, %s);
+                (industry, total_revenue, customer_count)
+                VALUES (%s, %s, %s);
             """,
-                (row[0], float(row[1]), row[2], float(row[3]), float(row[4])),
+                (row[0], float(row[1]), row[2]),
             )
 
         logger.info(f"Inserted {len(results1)} industry records")
@@ -318,15 +318,13 @@ def execute_business_queries():
             cursor.execute(
                 """
                 INSERT INTO business_analytics.segment_analysis 
-                (segment, client_count, percentage_share, total_revenue, avg_revenue_per_customer)
-                VALUES (%s, %s, %s, %s, %s);
+                (segment, client_count, percentage_share)
+                VALUES (%s, %s, %s);
             """,
                 (
                     row[0],
                     row[1],
                     float(row[2]),
-                    float(row[3]) if row[3] else 0,
-                    float(row[4]) if row[4] else 0,
                 ),
             )
 
@@ -344,10 +342,10 @@ def execute_business_queries():
             cursor.execute(
                 """
                 INSERT INTO business_analytics.recent_customers 
-                (customer_id, customer_name, segment, industry, created_date, status)
-                VALUES (%s, %s, %s, %s, %s, %s);
+                (customer_id)
+                VALUES (%s);
             """,
-                (row[0], row[1], row[2], row[3], row[4], row[5]),
+                (row[0],),
             )
 
         logger.info(f"Inserted {len(results3)} recent customer records")
@@ -360,27 +358,16 @@ def execute_business_queries():
 
         # Clear and insert top customers data
         cursor.execute("TRUNCATE TABLE business_analytics.top_customers;")
-        for i, row in enumerate(results4, 1):
+        for row in results4:
             cursor.execute(
                 """
                 INSERT INTO business_analytics.top_customers 
-                (rank_position, customer_id, customer_name, segment, industry, country, 
-                 total_revenue, total_transactions, avg_revenue_per_transaction, 
-                 first_transaction_date, last_transaction_date)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                (customer_id, total_revenue)
+                VALUES (%s, %s);
             """,
                 (
-                    i,
                     row[0],
-                    row[1],
-                    row[2],
-                    row[3],
-                    row[4],
-                    float(row[5]),
-                    row[6],
-                    float(row[7]),
-                    row[8],
-                    row[9],
+                    float(row[1]),
                 ),
             )
 
@@ -398,20 +385,12 @@ def execute_business_queries():
             cursor.execute(
                 """
                 INSERT INTO business_analytics.monthly_active_customers 
-                (customer_id, customer_name, segment, industry, total_revenue, 
-                 total_transactions, months_with_revenue, revenue_rank, percentile)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                (customer_id, total_revenue)
+                VALUES (%s, %s);
             """,
                 (
                     row[0],
-                    row[1],
-                    row[2],
-                    row[3],
-                    float(row[4]),
-                    row[5],
-                    row[6],
-                    row[7],
-                    float(row[9]),
+                    float(row[1]),
                 ),
             )
 
