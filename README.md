@@ -91,19 +91,19 @@ Each infrastructure module includes a `terraform.tfvars.example` file. Copy to `
 ## Project Structure
 
 ```
-├── analytics/                 # Glue jobs and SQL queries
+├── analytics/                # Glue jobs and SQL queries
 ├── data_generation/          # CSV data generation scripts
 ├── database/                 # Database schema definitions
 ├── etl/                      # ETL pipeline components
 ├── infrastructure/           # Terraform infrastructure code
-│   ├── analytics/           # Analytics infrastructure
-│   ├── base/                # Base infrastructure (RDS, S3, VPC)
-│   ├── etl/                 # ETL infrastructure
-│   └── orchestration/       # Step Functions and scheduling
-└── requirements.txt         # Python dependencies
+│   ├── analytics/             # Analytics infrastructure
+│   ├── base/                  # Base infrastructure (RDS, S3, VPC)
+│   ├── etl/                   # ETL infrastructure
+│   └── orchestration/         # Step Functions and scheduling
+└── requirements.txt          # Python dependencies
 ```
 
 ## Branching Strategy
 
-- `main`: Production-ready code
-- `develop`: Integration branch for features
+- `main`: Simulating production environment
+- `develop`: Simulating development environment
