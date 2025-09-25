@@ -47,7 +47,7 @@ CREATE INDEX IF NOT EXISTS idx_traffic_send_date ON traffic(send_date);
 CREATE INDEX IF NOT EXISTS idx_traffic_account_id ON traffic(account_id);
 CREATE INDEX IF NOT EXISTS idx_customers_account_id ON customers(account_id);
 
--- Customers Revenue by Period table
+-- Customers revenue by period table
 CREATE TABLE IF NOT EXISTS customers_revenue_by_period (
     customer_id INTEGER PRIMARY KEY,
     revenue_last_month DECIMAL(12,2) NOT NULL DEFAULT 0.00,

@@ -2,6 +2,91 @@
 
 Data processing system that loads CSV data into PostgreSQL and runs analytics queries.
 
+## Database Schema
+
+### Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    CUSTOMERS {
+        int customer_id PK
+        int account_id UK
+        varchar customer_name
+        varchar segment
+        varchar industry
+        varchar country
+        date created_date
+    }
+    
+    CHANNELS {
+        int channel_id PK
+        varchar channel_name UK
+        varchar channel_type
+        decimal unit_price_eur
+    }
+    
+    TRAFFIC {
+        int traffic_id PK
+        date send_date
+        int account_id
+        int customer_id FK
+        int channel_id FK
+        int interactions_count
+        decimal revenue_eur
+    }
+    
+    CUSTOMERS_REVENUE_BY_PERIOD {
+        int customer_id PK
+        decimal revenue_last_month
+        decimal revenue_last_quarter
+        decimal revenue_mtd
+        decimal revenue_ytd
+        decimal revenue_increase_pct_qoq
+        timestamp last_updated
+    }
+    
+    CUSTOMERS ||--o{ TRAFFIC : "has"
+    CHANNELS ||--o{ TRAFFIC : "used_in"
+    CUSTOMERS ||--o| CUSTOMERS_REVENUE_BY_PERIOD : "has_revenue_data"
+```
+
+### Table Relationships
+
+**CUSTOMERS ↔ TRAFFIC (One-to-Many)**
+- One customer can have multiple traffic records
+- Connected via `customer_id` (FK in traffic)
+- Also connected via `account_id` for business logic
+
+**CHANNELS ↔ TRAFFIC (One-to-Many)**
+- One channel can be used in multiple traffic records
+- Connected via `channel_id` (FK in traffic)
+
+**CUSTOMERS ↔ CUSTOMERS_REVENUE_BY_PERIOD (One-to-One)**
+- Each customer has one revenue summary record
+- Connected via `customer_id` (PK in both tables)
+
+### Unique Constraint Explanation
+
+The `uk_traffic_unique` constraint on `(send_date, account_id, customer_id, channel_id)` prevents **duplicate traffic records** for the same:
+- Date
+- Customer 
+- Channel
+
+**Why this matters:**
+- **Data Integrity**: Prevents accidental duplicate entries
+- **Upsert Operations**: Allows safe "INSERT ... ON CONFLICT UPDATE" operations
+- **ETL Pipeline**: When Glue job runs multiple times, it won't create duplicates
+- **Business Logic**: One customer can't have multiple traffic records for the same channel on the same day
+
+**Example scenario:**
+Without this constraint, you could accidentally have:
+```
+send_date: 2024-01-15, account_id: 123, customer_id: 1, channel_id: 2, interactions: 100
+send_date: 2024-01-15, account_id: 123, customer_id: 1, channel_id: 2, interactions: 50
+```
+
+With the constraint, only one record is allowed, and you can safely update it.
+
 ## Architecture
 
 ### Components

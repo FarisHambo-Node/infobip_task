@@ -40,3 +40,6 @@ data/
 
 # Jupyter
 .ipynb_checkpoints
+
+# Azure config
+config.json
