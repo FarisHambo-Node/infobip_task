@@ -1,6 +1,0 @@
-{
-    "ALPHA_VANTAGE_API_KEY": "ARZ8YPRK3FZXLBSL",
-    "AZURE_STORAGE_ACCOUNT": "cpaastask",
-    "AZURE_CONTAINER": "analytics",
-    "AZURE_SAS_TOKEN": "sv=2024-11-04&ss=bfqt&srt=sco&sp=rwdlacupyx&se=2025-10-15T04:51:35Z&st=2025-09-24T20:36:35Z&spr=https&sig=U13SlWdeg4PddtSHGC%2B7VjVMMDARjP49MBhqF6yNXw8%3D"
-}
