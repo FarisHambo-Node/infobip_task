@@ -45,7 +45,7 @@ erDiagram
         timestamp last_updated
     }
     
-    CUSTOMERS ||--o{ TRAFFIC : "generates"
+    CUSTOMERS ||--o{ TRAFFIC : "has"
     CHANNELS ||--o{ TRAFFIC : "used_in"
     CUSTOMERS ||--o| CUSTOMERS_REVENUE_BY_PERIOD : "has_revenue_data"
 ```
