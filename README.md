@@ -95,6 +95,9 @@ Each infrastructure module includes a `terraform.tfvars.example` file. Copy to `
 ├── data_generation/          # CSV data generation scripts
 ├── database/                 # Database schema definitions
 ├── etl/                      # ETL pipeline components
+├── final_additional_task/    # Additional Jupyter notebook task
+│   ├── stock_comparison.ipynb # Jupyter notebook connecting to ALPHA_VANTAGE API
+│   └── config.json            # Configuration for API keys and Azure storage
 ├── infrastructure/           # Terraform infrastructure code
 │   ├── analytics/             # Analytics infrastructure
 │   ├── base/                  # Base infrastructure (RDS, S3, VPC)

@@ -37,3 +37,6 @@ data/
 
 # PDFs
 *.pdf
+
+# Jupyter
+.ipynb_checkpoints
